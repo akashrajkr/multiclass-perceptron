@@ -15,7 +15,7 @@ the actual (correct) weight vector.
 
 ##### general:
 
-`python3 trainer.py --dataset  bike_dataset --output bike_classifier`
+`python3 trainer.py --dataset  bike_dataset --output bike`
 
 `python3 predictor.py --model bike`
 
@@ -23,11 +23,11 @@ the actual (correct) weight vector.
 
 ###### Set number of epochs:
 
-`python3 trainer.py --dataset  bike_dataset --output bike_classifier --epochs 20 `
+`python3 trainer.py --dataset  bike_dataset --output bike --epochs 20 `
 
 ###### Set number of hidden layer neurons if you want to train using hidden layer:
 
-`python3 trainer.py --dataset  bike_dataset --output bike_classifier --hidden 10 `
+`python3 trainer.py --dataset  bike_dataset --output bike --hidden 10 `
 
 ###### Test an arbitrary image with the model:
 `python3 predictor.py --model bike --test_image bike_dataset/sports/3.png`
