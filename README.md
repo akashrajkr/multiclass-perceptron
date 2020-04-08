@@ -11,7 +11,7 @@ next data point is read in. However, in the case that the predicted value is wro
 re corrected as follows: The feature vector is subtracted from the predicted weight vector, and added to
 the actual (correct) weight vector.
 
-###Usage :
+### Usage :
 
 ##### general:
 
