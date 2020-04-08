@@ -4,20 +4,19 @@ import numpy as np
 import cv2
 import argparse
 from imutils import paths
+from tqdm import tqdm
 
 # Constants
-BIAS = 1  # Dummy Feature for use in setting constant factor in Training.
-TRAIN_TEST_RATIO = .6  # Default Ratio of data to be used in Training vs. Testing.
+BIAS = 1  					# Dummy Feature for use in setting constant factor in Training.
+TRAIN_TEST_RATIO = .6  		# Default Ratio of data to be used in Training vs. Testing.
+OUTPUT_PATH = 'output/'
 
 
 class MultiClassPerceptron:
-    # Analytics values initialize
+    # initialize values
     accuracy = 0
 
     """
-    A Multi-Class Perceptron Model object, with functions for loading feature data, training the algorithm,
-    and running analytics on model performance.
-
     :param  classes           List of categories/classes (match tags in tagged data).
     :param  feature_data      Feature Data, in format specified in README, usually imported from feature_data module.
     :param  iterations        Number of iterations to run training data through. Set to 100 by default.
@@ -52,11 +51,11 @@ class MultiClassPerceptron:
 
     def train(self):
         """
-        Train the Multi-Class Perceptron algorithm using the following method:
+        Training is implemented in the following way:
 
         During each iteration of training, the data (formatted as a feature vector) is read in, and the dot
         product is taken with each unique weight vector (which are all initially set to 0). The class that
-        yields the highest product is the class to which the data belongs. In the case this class is the
+        yields the highest product is the class to which the data belongs(modified ReLU function). In the case this class is the
         correct value (matches with the actual category to which the data belongs), nothing happens, and the
         next data point is read in. However, in the case that the predicted value is wrong, the weight vectors a
         re corrected as follows: The feature vector is subtracted from the predicted weight vector, and added to
@@ -64,26 +63,32 @@ class MultiClassPerceptron:
         the correct one.
         """
         if not self.hidden_exists:
-            print('Training datasets...')
-            for _ in range(self.iterations):
-                print('Epoch:', _ + 1)
-                for category, feature_dict in self.train_set:
-                    # Format feature values as a vector, with extra BIAS term.
-                    img = cv2.imread(feature_dict['path'])
-                    dim = (30, 30)
-                    if img is None:
-                        print('Image is none')
-                    resized = cv2.resize(img, dim, cv2.INTER_AREA)
+            print('Training datasets ', end='')
+        else:
+            print('Training datasets with hidden layer ', end='')
+        print('for', self.iterations, 'epochs...')
+        pbar = tqdm(range(self.iterations))
+        for _ in pbar:
+            pbar.set_description('Epoch %d' % (_ + 1), refresh=False)
+            # print('Epoch = ', (_ + 1))
+            for category, feature_dict in self.train_set:
+                # Format feature values as a vector, with extra BIAS term.
+                img = cv2.imread(feature_dict['path'])
+                dim = (30, 30)
+                if img is None:
+                    print('Image is none')
+                resized = cv2.resize(img, dim, cv2.INTER_AREA)
 
-                    input_array = []
-                    for i in range(resized.shape[0]):
-                        for j in range(resized.shape[1]):
-                            input_array.append((np.mean(resized[i][j]) / 255))
+                input_array = []
+                for i in range(resized.shape[0]):
+                    for j in range(resized.shape[1]):
+                        input_array.append((np.mean(resized[i][j]) / 255))
 
-                    input_array.append(BIAS)
-                    input_vector = np.array(input_array)
-                    # Initialize arg_max value, predicted class.
-                    arg_max, predicted_class = 0, self.classes[0]
+                input_array.append(BIAS)
+                input_vector = np.array(input_array)
+                # Initialize arg_max value, predicted class.
+                arg_max, predicted_class = 0, self.classes[0]
+                if not self.hidden_exists:
                     # Multi-Class Decision Rule:
                     for c in self.classes:
                         current_activation = np.dot(input_vector, self.weight_vectors[c])
@@ -93,30 +98,7 @@ class MultiClassPerceptron:
                     if not (category == predicted_class):
                         self.weight_vectors[category] += [i * self.lr for i in input_vector]
                         self.weight_vectors[predicted_class] -= [i * self.lr for i in input_vector]
-        else:
-            print('Training datasets with hidden layer...')
-            for _ in range(self.iterations):
-                print("Epoch ", _ + 1)
-                for category, feature_dictionary in self.train_set:
-                    #                 print(category, feature_dictionary)
-                    # Obtaininig the Image and preprocessing it
-                    image = cv2.imread(feature_dictionary['path'])
-                    # Dimension Required for Resizing the Data
-                    dim = (30, 30)
-
-                    resized_image = cv2.resize(image, dim, cv2.INTER_AREA)
-
-                    # Normalising the Image between 0 and 1
-
-                    input_array = [np.mean(resized_image[i][j] / 255) for i in range(resized_image.shape[0])
-                                   for j in range(resized_image.shape[1])]
-                    # Appending Extra Bias for each Input
-                    input_array.append(BIAS)
-                    input_vector = np.array(input_array)
-
-                    # Initialise ARG_MAX we perform our activations with that
-                    arg_max, predicted_class = 0, self.classes[0]
-
+                else:
                     # This is the Input for Hidden Layers
                     input_array_hidden = []
 
@@ -145,8 +127,7 @@ class MultiClassPerceptron:
 
     def predict(self, feature_dict):
         """
-        Categorize a brand-new, unseen data point based on the existing collected data.
-
+        Categorize an unseen data point based on the existing collected data.
         :param  feature_dict        Dictionary of the same form as the training feature data.
         :return                     Return the predicted category for the data point.
         """
@@ -154,42 +135,28 @@ class MultiClassPerceptron:
         dim = (30, 30)
         resized = cv2.resize(img, dim, cv2.INTER_AREA)
 
+        input_array = [np.mean(resized[i][j] / 255) for i in range(resized.shape[0]) for j in range(resized.shape[1])]
+        input_array.append(BIAS)
+        feature_vector = np.array(input_array)
+
+        arg_max, predicted_class = 0, self.classes[0]
         if not self.hidden_exists:
-            input_array = []
-            for i in range(resized.shape[0]):
-                for j in range(resized.shape[1]):
-                    input_array.append((np.mean(resized[i][j]) / 255))
-
-            input_array.append(BIAS)
-            feature_vector = np.array(input_array)
-
-            # Initialize arg_max value, predicted class.
-            arg_max, predicted_class = 0, self.classes[0]
-
             # Multi-Class Decision Rule:
             for c in self.classes:
                 current_activation = np.dot(feature_vector, self.weight_vectors[c])
                 if current_activation >= arg_max:
                     arg_max, predicted_class = current_activation, c
         else:
-            input_array = [np.mean(resized[i][j] / 255) for i in range(resized.shape[0])
-                           for j in range(resized.shape[1])]
-
-            input_array.append(BIAS)
-            feature_vector = np.array(input_array)
-
-            arg_max, predicted_class = 0, self.classes[0]
-
-            # This is the Input for Hidden Layers
+            # This holds the output activations of hidden layer neurons so that it acts as input to output layer
             input_array_hidden = []
 
-            # We Make MultiClass Decision Rule Based on the above conditions
+            # Computing hidden layer activations
             for index in self.hidden:
                 current_activation = np.dot(feature_vector, self.weight_vectors[index])
                 current_activation = MultiClassPerceptron.__reLu(current_activation)
                 input_array_hidden.append(current_activation)
 
-            # We Make MultiClass Decision Rule Based on the above conditions
+            # predicting the class
             for index in self.classes:
                 current_activation = np.dot(input_array_hidden, self.weight_hidd_out[index])
                 if current_activation >= arg_max:
@@ -227,9 +194,10 @@ class MultiClassPerceptron:
 
     def save(self, classifier_name):
         """
-        Saves classifier as a .pickle file to the classifier_models directory.
-        :param  classifier_name  Name under which to save the classifier.
+        Saves classifier as a .pickle file to the output directory.
+        :param  classifier_name  Name under which to save the classifier model.
         """
+        classifier_name = OUTPUT_PATH + classifier_name
         with open(classifier_name + ".pik", 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
@@ -258,16 +226,16 @@ def fetch_data(data):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("-d", "--dataset", default='bike_dataset',
-                    help="path to input directory of images")
+    ap.add_argument("-d", "--dataset", required=True,
+                    help="Path to input dataset")
+    ap.add_argument("-o", "--output", required=True,
+                    help="Name under which to save the classifier model")
+    ap.add_argument("-hn", "--hidden", type=int,
+                    help="set the number of hidden layer neurons")
     ap.add_argument('-e', "--epochs", type=int, default=10,
                     help="Train the model with specified number of epochs")
     ap.add_argument("-lr", "--learningrate", type=float, default=0.1,
-                    help="set the learning rate for the algorithm")
-    ap.add_argument("-o", "--output", default='output/classifier',
-                    help="set the learning rate for the algorithm")
-    ap.add_argument("-hn", "--hidden", type=int,
-                    help="set the number of hidden layer neurons")
+                    help="Set the learning rate for the algorithm")
     args = vars(ap.parse_args())
 
     classes, feature_data = fetch_data(args['dataset'])
