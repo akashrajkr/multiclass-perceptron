@@ -246,7 +246,7 @@ def main():
 
     if type(hidden) is int:
         if hidden > 3 and hidden < 201:
-            hidden_neuron = [i for i in range(hidden)]
+            hidden_neuron = [random.randrange(1,10) for i in range(hidden)]
             classifier = MultiClassPerceptron(classes, feature_data, epochs, lr, hidden_neuron)
         else:
             print('Invalid number of hidden neurons. It must lie between 4 and 200.')
