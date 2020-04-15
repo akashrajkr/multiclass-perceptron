@@ -8,9 +8,9 @@ from tqdm import tqdm
 
 # Constants
 BIAS = 1  					# Dummy Feature for use in setting constant factor in Training.
-TRAIN_TEST_RATIO = .6  		# Default Ratio of data to be used in Training vs. Testing.
+TRAIN_TEST_RATIO = 0.8		# Default Ratio of data to be used in Training vs. Testing.
 OUTPUT_PATH = 'output/'
-
+analysis_values = {}
 
 class MultiClassPerceptron:
     # initialize values
@@ -20,7 +20,7 @@ class MultiClassPerceptron:
     :param  classes           List of categories/classes (match tags in tagged data).
     :param  feature_data      Feature Data, in format specified in README, usually imported from feature_data module.
     :param  iterations        Number of iterations to run training data through. Set to 100 by default.
-    :param  lr                Set learning rate for the model
+    :param  lr                Set learning rate for the model.
     :param  hidden            [Optional] set the number of hidden neurons for multilayer perceptron network.
     :param  train_test_ratio  Ratio of data to be used in training vs. testing. Set to 75% by default.
     """
@@ -77,6 +77,7 @@ class MultiClassPerceptron:
                 dim = (30, 30)
                 if img is None:
                     print('Image is none')
+                img = cv2.GaussianBlur(img, (19, 19), 0)
                 resized = cv2.resize(img, dim, cv2.INTER_AREA)
 
                 input_array = []
@@ -132,6 +133,7 @@ class MultiClassPerceptron:
         :return                     Return the predicted category for the data point.
         """
         img = cv2.imread(feature_dict['path'])
+        img = cv2.GaussianBlur(img, (19, 19), 0)
         dim = (30, 30)
         resized = cv2.resize(img, dim, cv2.INTER_AREA)
 
@@ -172,14 +174,14 @@ class MultiClassPerceptron:
         pred_class = self.predict(item[1])
         print("Predicted class: " + pred_class)
 
-    def calculate_accuracy(self):
+    def calculate_accuracy(self, i = 0):
         """
         Calculates the accuracy of the classifier by running algorithm against test set and comparing
         the output to the actual categorization.
         """
         correct, incorrect = 0, 0
-        random.shuffle(self.feature_data)
-        self.test_set = self.feature_data[int(len(self.feature_data) * self.ratio):]
+        # random.shuffle(self.feature_data)
+        # self.test_set = self.feature_data[int(len(self.feature_data) * self.ratio):]
         for feature_dict in self.test_set:
             actual_class = feature_dict[0]
             predicted_class = self.predict(feature_dict[1])
@@ -190,7 +192,11 @@ class MultiClassPerceptron:
                 incorrect += 1
 
         # print("ACCURACY:")
-        print("Model Accuracy:", (correct * 1.0) / ((correct + incorrect) * 1.0))
+        self.accuracy = (correct * 1.0) / ((correct + incorrect) * 1.0)
+        print("Model Accuracy:", self.accuracy)
+        if i > 0:
+            analysis_values[i] = self.accuracy
+
 
     def save(self, classifier_name):
         """
@@ -253,9 +259,18 @@ def main():
             exit()
     else:
         classifier = MultiClassPerceptron(classes, feature_data, epochs, lr)
-
+        # pass
+    
     classifier.train()
     classifier.calculate_accuracy()
+
+    # Analysis from epoch 1 to 10
+    
+    # for i in range(1, epochs+1):
+    #     classifier = MultiClassPerceptron(classes, feature_data, i, lr)
+    #     classifier.train()
+    #     classifier.calculate_accuracy(i)
+    # print(analysis_values)
     classifier.save(classifier_name)
 
 
